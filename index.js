@@ -9,9 +9,12 @@ import authorRoutes from "./routes/authorRoutes.js";
 import genreRoutes from "./routes/genreRoutes.js";
 
 dotenv.config();
+
 const app = express();
 
+// Connect DB
 connectDB();
+
 app.use(cors());
 app.use(express.json());
 
@@ -22,5 +25,10 @@ app.use("/api/genres", genreRoutes);
 
 app.get("/", (req, res) => res.send("Bookstore API running"));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== "test") {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+export default app;

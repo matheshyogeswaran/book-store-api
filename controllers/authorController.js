@@ -1,16 +1,30 @@
 import Author from "../models/Author.js";
 
+// Get all authors
 export const getAuthors = async (req, res) => {
   const authors = await Author.find();
   res.json(authors);
 };
 
+// Create author
 export const createAuthor = async (req, res) => {
-  const author = new Author(req.body);
-  await author.save();
-  res.json(author);
+  try {
+    const { name, bio } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Author name is required" });
+    }
+
+    const author = new Author({ name, bio });
+    await author.save();
+
+    res.status(200).json(author);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
+// Get author by ID
 export const getAuthorById = async (req, res) => {
   try {
     const author = await Author.findById(req.params.id);
@@ -21,20 +35,24 @@ export const getAuthorById = async (req, res) => {
 
     res.json(author);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(400).json({ message: "Invalid author ID" });
   }
 };
 
+// Update author
 export const updateAuthor = async (req, res) => {
   try {
-    const authorId = req.params.id;
-    const updateData = req.body;
+    const { name } = req.body;
 
-    // Find the author and update
+    // ✅ Optional validation
+    if (name === "") {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+
     const updatedAuthor = await Author.findByIdAndUpdate(
-      authorId,
-      updateData,
-      { new: true } // return the updated document
+      req.params.id,
+      req.body,
+      { new: true }
     );
 
     if (!updatedAuthor) {
@@ -43,17 +61,14 @@ export const updateAuthor = async (req, res) => {
 
     res.json(updatedAuthor);
   } catch (error) {
-    console.error("Error updating author:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(400).json({ message: "Invalid author ID" });
   }
 };
 
+// Delete author
 export const deleteAuthor = async (req, res) => {
   try {
-    const authorId = req.params.id;
-
-    // Find and delete the author
-    const deletedAuthor = await Author.findByIdAndDelete(authorId);
+    const deletedAuthor = await Author.findByIdAndDelete(req.params.id);
 
     if (!deletedAuthor) {
       return res.status(404).json({ message: "Author not found" });
@@ -61,7 +76,6 @@ export const deleteAuthor = async (req, res) => {
 
     res.json({ message: "Author deleted successfully" });
   } catch (error) {
-    console.error("Error deleting author:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(400).json({ message: "Invalid author ID" });
   }
 };

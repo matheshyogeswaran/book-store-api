@@ -3,10 +3,20 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import config from "../config/auth.config.js";
 
-export const register = async (req,res)=>{
-  const {username,password} = req.body;
+export const register = async (req, res) => {
+  const { username, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password,10);
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password are required" });
+  }
+
+  const existingUser = await User.findOne({ username });
+  if (existingUser) {
+    return res.status(400).json({ message: "User already exists" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = new User({
     username,
@@ -15,32 +25,37 @@ export const register = async (req,res)=>{
 
   await user.save();
 
-  res.send({message:"User registered"});
+  res.status(200).json({ message: "User registered" });
 };
 
-export const login = async (req,res)=>{
-  const {username,password} = req.body;
+export const login = async (req, res) => {
+  const { username, password } = req.body;
 
-  const user = await User.findOne({username});
-
-  if(!user){
-    return res.status(404).send({message:"User not found"});
+  // ✅ Validation
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password are required" });
   }
 
-  const passwordValid = await bcrypt.compare(password,user.password);
+  const user = await User.findOne({ username });
 
-  if(!passwordValid){
-    return res.status(401).send({message:"Invalid password"});
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const passwordValid = await bcrypt.compare(password, user.password);
+
+  if (!passwordValid) {
+    return res.status(401).json({ message: "Invalid password" });
   }
 
   const token = jwt.sign(
-    {id:user._id},
+    { id: user._id },
     config.secret,
-    {expiresIn:"1h"}
+    { expiresIn: "1h" }
   );
 
-  res.send({
-    username:user.username,
-    accessToken:token
+  res.status(200).json({
+    username: user.username,
+    accessToken: token
   });
 };

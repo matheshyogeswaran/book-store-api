@@ -109,3 +109,122 @@ describe("Author API", () => {
   });
 
 });
+
+describe("Author API - Wrong/Error Scenarios", () => {
+
+  let token;
+  let authorId;
+
+  const testUser = {
+    username: "erroruser",
+    password: "123456"
+  };
+
+  const testAuthor = {
+    name: "J.K. Rowling",
+    bio: "British author"
+  };
+
+  before(async () => {
+    // Clean test data
+    await User.deleteMany({ username: testUser.username });
+    await Author.deleteMany({ name: testAuthor.name });
+
+    // Register user
+    await request(app)
+      .post("/api/auth/register")
+      .send(testUser);
+
+    // Login user
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send(testUser);
+
+    token = loginRes.body.accessToken;
+
+    // Create a valid author for some tests
+    const authorRes = await request(app)
+      .post("/api/authors")
+      .set("Authorization", `Bearer ${token}`)
+      .send(testAuthor);
+
+    authorId = authorRes.body._id;
+  });
+
+  it("should fail to create an author with missing name", async () => {
+    const res = await request(app)
+      .post("/api/authors")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ bio: "Bio only" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Author name is required");
+  });
+
+  it("should fail to get author with invalid ID", async () => {
+    const res = await request(app)
+      .get("/api/authors/invalidID")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid author ID");
+  });
+
+  it("should fail to get author with non-existent ID", async () => {
+    const res = await request(app)
+      .get("/api/authors/63a123456789abcd12345678") // random valid ObjectId
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Author not found");
+  });
+
+  it("should fail to update author with empty name", async () => {
+    const res = await request(app)
+      .put(`/api/authors/${authorId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Name cannot be empty");
+  });
+
+  it("should fail to update author with invalid ID", async () => {
+    const res = await request(app)
+      .put("/api/authors/invalidID")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "New Name" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid author ID");
+  });
+
+  it("should fail to update author with non-existent ID", async () => {
+    const res = await request(app)
+      .put("/api/authors/63a123456789abcd12345678")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "New Name" });
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Author not found");
+  });
+
+  it("should fail to delete author with invalid ID", async () => {
+    const res = await request(app)
+      .delete("/api/authors/invalidID")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid author ID");
+  });
+
+  it("should fail to delete author with non-existent ID", async () => {
+    const res = await request(app)
+      .delete("/api/authors/63a123456789abcd12345678")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Author not found");
+  });
+
+});

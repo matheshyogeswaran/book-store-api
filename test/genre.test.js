@@ -110,3 +110,123 @@ describe("Genre API", () => {
   });
 
 });
+
+
+/**
+ * Genre API - Wrong/Error Scenario Tests
+ *
+ * Tests negative/error scenarios for Genre routes:
+ * - Create genre with missing name
+ * - Get genre with invalid/non-existent ID
+ * - Update genre with invalid/non-existent ID or empty name
+ * - Delete genre with invalid/non-existent ID
+ */
+
+
+describe("Genre API - Wrong/Error Scenarios", () => {
+
+  let token;
+  let genreId;
+
+  const testUser = { username: "errorgenreuser", password: "123456" };
+  const testGenre = { name: "Mystery", description: "Mystery novels" };
+
+  before(async () => {
+    // Clean DB
+    await User.deleteMany({ username: testUser.username });
+    await Genre.deleteMany({ name: testGenre.name });
+
+    // Register & login user
+    await request(app).post("/api/auth/register").send(testUser);
+    const loginRes = await request(app).post("/api/auth/login").send(testUser);
+    token = loginRes.body.accessToken;
+  });
+
+  it("should fail to create a genre without a name", async () => {
+    const res = await request(app)
+      .post("/api/genres")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ description: "No name provided" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Genre name is required");
+  });
+
+  it("should fail to get a genre with invalid ID", async () => {
+    const res = await request(app)
+      .get("/api/genres/invalidID")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid genre ID");
+  });
+
+  it("should fail to get a genre with non-existent ID", async () => {
+    const res = await request(app)
+      .get("/api/genres/63a123456789abcd12345678")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Genre not found");
+  });
+
+  it("should fail to update a genre with invalid ID", async () => {
+    const res = await request(app)
+      .put("/api/genres/invalidID")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Updated Name" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid genre ID");
+  });
+
+  it("should fail to update a genre with non-existent ID", async () => {
+    const res = await request(app)
+      .put("/api/genres/63a123456789abcd12345678")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Updated Name" });
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Genre not found");
+  });
+
+  it("should fail to update a genre with empty name", async () => {
+    // First, create a valid genre
+    const genreRes = await request(app)
+      .post("/api/genres")
+      .set("Authorization", `Bearer ${token}`)
+      .send(testGenre);
+
+    genreId = genreRes.body._id;
+
+    const res = await request(app)
+      .put(`/api/genres/${genreId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "" });
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Name cannot be empty");
+
+    // Clean up
+    await Genre.findByIdAndDelete(genreId);
+  });
+
+  it("should fail to delete a genre with invalid ID", async () => {
+    const res = await request(app)
+      .delete("/api/genres/invalidID")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(400);
+    expect(res.body).to.have.property("message", "Invalid genre ID");
+  });
+
+  it("should fail to delete a genre with non-existent ID", async () => {
+    const res = await request(app)
+      .delete("/api/genres/63a123456789abcd12345678")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).to.equal(404);
+    expect(res.body).to.have.property("message", "Genre not found");
+  });
+
+});

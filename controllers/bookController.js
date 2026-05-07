@@ -4,7 +4,10 @@ import Genre from "../models/Genre.js";
 
 // Get all books
 export const getBooks = async (req, res) => {
-  const books = await Book.find().populate("author").populate("genre");
+  // Only find books where owner matches the logged-in user
+  const books = await Book.find({ owner: req.userId }) 
+    .populate("author")
+    .populate("genre");
   res.json(books);
 };
 
@@ -43,11 +46,12 @@ export const createBook = async (req, res) => {
       return res.status(400).json({ message: "Author or Genre not found" });
     }
 
-    const book = new Book({
+ const book = new Book({
       title,
       author: author._id,
       genre: genre._id,
-      publishedYear
+      publishedYear,
+      owner: req.userId // Save the ID of the person logged in
     });
 
     await book.save();
@@ -106,14 +110,17 @@ export const updateBook = async (req, res) => {
 // Delete book
 export const deleteBook = async (req, res) => {
   try {
-    const deletedBook = await Book.findByIdAndDelete(req.params.id);
+    // Find by ID AND owner
+    const deletedBook = await Book.findOneAndDelete({ 
+      _id: req.params.id, 
+      owner: req.userId 
+    });
 
     if (!deletedBook) {
-      return res.status(404).json({ message: "Book not found" });
+      return res.status(404).json({ message: "Book not found or unauthorized" });
     }
-
     res.json({ message: "Book deleted successfully" });
   } catch (error) {
-    res.status(400).json({ message: "Invalid book ID" });
+    res.status(400).json({ message: "Invalid request" });
   }
 };

@@ -6,7 +6,6 @@ import config from "../config/auth.config.js";
 export const register = async (req, res) => {
   const { username, password } = req.body;
 
-
   if (!username || !password) {
     return res.status(400).json({ message: "Username and password are required" });
   }
@@ -25,7 +24,18 @@ export const register = async (req, res) => {
 
   await user.save();
 
-  res.status(200).json({ message: "User registered" });
+
+  const token = jwt.sign(
+    { id: user._id },
+    config.secret,
+    { expiresIn: "1h" }
+  );
+
+  // ✅ Return the same structure as the login function
+  res.status(201).json({
+    username: user.username,
+    accessToken: token
+  });
 };
 
 export const login = async (req, res) => {

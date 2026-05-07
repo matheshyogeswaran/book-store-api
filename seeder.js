@@ -40,8 +40,6 @@ const books = [
 
 const seedData = async () => {
   await connectDB();
-
-
   await Book.deleteMany({});
   await Author.deleteMany({});
   await Genre.deleteMany({});
